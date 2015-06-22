@@ -8,7 +8,7 @@ file ( GLOB BALLET_SRCS
        "src/comm/coding/convolutionalcoding.cpp"
        "src/comm/coding/convolutionalencoder.cpp"
        "src/comm/coding/viterbi.cpp"
-       "src/comm/coding/lva.cpp"
+       #"src/comm/coding/lva.cpp"
        "src/comm/coding/appdecoder.cpp"
        "src/comm/coding/turboencoder.cpp"
        "src/comm/coding/turbodecoder.cpp" )
@@ -26,7 +26,7 @@ file ( GLOB BALLET_COMM_HEADER_FILES
        "src/comm/crc/crcgenerator.h"
        "src/comm/coding/viterbi.h"
        "src/comm/coding/appdecoder.h"
-       "src/comm/coding/lva.h"
+       #"src/comm/coding/lva.h"
        "src/comm/coding/convolutionalencoder.h"
        "src/comm/coding/convolutionalcoding.h"
        "src/comm/coding/turboencoder.h"
