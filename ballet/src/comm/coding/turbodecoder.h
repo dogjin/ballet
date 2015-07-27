@@ -1,10 +1,9 @@
 #ifndef __ballet_comm_turbodecoder_h
 #define __ballet_comm_turbodecoder_h
 
-#include <vector>
-#include <splib/vec.h>
-#include <splib/commfunc.h>
+#include <armadillo>
 #include "ballet/object.h"
+#include "convolutionalcoding.h"
 
 namespace ballet
 {
@@ -22,14 +21,14 @@ namespace ballet
         TurboDecoder();
 
     public:
-        splib::Trellis TrellisStructure;
-        splib::ivec InterleaverIndices;
+        Trellis TrellisStructure;
+        arma::uvec InterleaverIndices;
         std::string Algorithm;
         int NumScalingBits;
         int NumIterations;
 
     public:
-        splib::fvec decode(const splib::fvec &x);
+        arma::mat decode(const arma::mat &x);
 
     };
 

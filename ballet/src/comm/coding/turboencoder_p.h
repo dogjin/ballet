@@ -17,8 +17,8 @@ namespace ballet
         ~TurboEncoderPrivate();
 
     public:
-        splib::Trellis TrellisStructure;
-        splib::ivec InterleaverIndices;
+        Trellis TrellisStructure;
+        arma::umat InterleaverIndices;
 
     public:
         int N;
@@ -26,10 +26,10 @@ namespace ballet
         int numTails;
 
     public:
-        splib::ivec rintrlvrIndices;
+        arma::umat rintrlvrIndices;
 
     public:
-        void encode(const splib::ivec &x, splib::ivec *y);
+        void encode(const arma::imat &x, arma::imat *y);
         void lock();
 
     };

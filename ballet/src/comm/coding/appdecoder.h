@@ -27,9 +27,12 @@
 #ifndef __ballet_comm_appdecoder_h
 #define __ballet_comm_appdecoder_h
 
-#include <splib/vec.h>
-#include <splib/commfunc.h>
+// ballet includes
 #include "ballet/object.h"
+#include "convolutionalcoding.h"
+
+// external includes
+#include <armadillo>
 
 namespace ballet
 {
@@ -89,7 +92,7 @@ namespace ballet
         APPDecoder();
 
         //! Constructor with trellis
-        APPDecoder(const splib::Trellis &trellis);
+        APPDecoder(const Trellis &trellis);
 
         /*!
           \brief Decode convolutional code using the a posteriori probability method
@@ -107,7 +110,7 @@ namespace ballet
           termination method, etc.)
 
         */
-        splib::fvec decode(const splib::fvec &Lu, const splib::fvec &Lc, splib::fvec *lcd = 0);
+        arma::mat decode(const arma::mat &Lu, const arma::mat &Lc, arma::mat *lcd = 0);
 
     public:
 
@@ -117,7 +120,7 @@ namespace ballet
           The trellis description of the convolutional code.
           The default is the result of poly2trellis(7,[171 133]).
         */
-        splib::Trellis TrellisStructure; 
+        Trellis TrellisStructure; 
 
         /*!
           \brief Decoding algorithm (True APP, Max*, Max)

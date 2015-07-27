@@ -1,10 +1,12 @@
 #ifndef __ballet_comm_turboencoder_h
 #define __ballet_comm_turboencoder_h
 
-#include <vector>
-#include <splib/vec.h>
-#include <splib/commfunc.h>
+// ballet includes
 #include "ballet/object.h"
+#include "convolutionalcoding.h"
+
+// external includes
+#include <armadillo>
 
 namespace ballet
 {
@@ -22,11 +24,11 @@ namespace ballet
         TurboEncoder();
 
     public:
-        splib::Trellis TrellisStructure;
-        splib::ivec InterleaverIndices;
+        Trellis TrellisStructure;
+        arma::umat InterleaverIndices;
 
     public:
-        splib::ivec encode(const splib::ivec &x);
+        arma::imat encode(const arma::imat &x);
 
     };
 

@@ -18,8 +18,8 @@ namespace ballet
         ~TurboDecoderPrivate();
 
     public:
-        splib::Trellis TrellisStructure;
-        splib::ivec InterleaverIndices;
+        Trellis TrellisStructure;
+        arma::uvec InterleaverIndices;
         std::string Algorithm;
         int NumScalingBits;
         int NumIterations;
@@ -33,10 +33,10 @@ namespace ballet
         int numTails;
 
     public:
-        splib::ivec rintrlvrIndices;
+        arma::uvec rintrlvrIndices;
 
     public:
-        void decode(const splib::fvec &x, splib::fvec *y);
+        void decode(const arma::mat &x, arma::mat *y);
         void lock();
 
     };

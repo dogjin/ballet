@@ -1,7 +1,9 @@
+// ballet includes
 #include "turboencoder.h"
 #include "turboencoder_p.h"
 #include "convolutionalcoding.h"
-#include <splib/matfunc.h>
+
+using namespace arma;
 
 namespace ballet
 {
@@ -38,8 +40,10 @@ namespace ballet
         numTails = K * N;
 
         // map reverse interleaver
-        rintrlvrIndices.set_size(InterleaverIndices.length());
-        for (size_t ii=0; ii<InterleaverIndices.length(); ii++)
+        rintrlvrIndices.set_size(
+            InterleaverIndices.n_rows,
+            InterleaverIndices.n_cols);
+        for (size_t ii=0; ii<InterleaverIndices.n_elem; ii++)
             rintrlvrIndices(InterleaverIndices(ii)) = ii;
 
         // set property_locked flag
@@ -47,52 +51,44 @@ namespace ballet
         
     }
 
-    void TurboEncoderPrivate::encode(const splib::ivec &x, splib::ivec *y)
+    void TurboEncoderPrivate::encode(const imat &x, imat *y)
     {
-
-        // pointer to trellis members
-        const int * NEXT = TrellisStructure.nextStates.begin();
-        const int * OUT = TrellisStructure.codeOutputs.begin();
 
         // number of trellis states
         int numStates = TrellisStructure.numStates;
 
         // number of bits in coded message
-        int cwlen = x.length();
+        int cwlen = x.n_elem;
 
         // calculate number of uncoded bits
         int L = (2*N-1)*cwlen + 2*numTails;
 
         // 1:st constituent encoder
-        splib::ivec y1(N*cwlen+numTails);
+        imat y1(N*cwlen+numTails,1);
         {
 
             const int * X = x.begin();
 
             // encode
             int s = 0;
-            int * Y1 = y1.begin();
             for (size_t i=0; i<cwlen; i++)
             {
 
                 // encoder input
-                int inpt = X[i];
+                int inpt = x(i);
 
                 // encoder output codeword (given input and state)
-                int otpt = OUT[inpt*numStates+s];
+                int otpt = TrellisStructure.outputs(s,inpt);
 
                 // convert output codeword to bit representation
                 for (size_t n=0; n<N; n++)
                 {
-                    Y1[N-n-1] = otpt&1;
+                    y1(N*(i+1)-n-1) = otpt&1;
                     otpt = otpt>>1;
                 }
 
                 // get next encoder state
-                s = NEXT[inpt*numStates+s];
-
-                // update pointer location
-                Y1 = Y1 + N;
+                s = TrellisStructure.nextStates(s,inpt);
 
             }
 
@@ -107,7 +103,7 @@ namespace ballet
                 int inpt = -1;
                 for (size_t j=0; j<TrellisStructure.numInputSymbols; j++)
                 {
-                    if (NEXT[j*numStates+s] == nxt)
+                    if (TrellisStructure.nextStates(s,j) == nxt)
                     {
                         inpt = j;
                         break;
@@ -115,57 +111,51 @@ namespace ballet
                 }
 
                 // find termination bit output (given state and termination bit input)
-                int otpt = OUT[inpt*numStates+s];
+                int otpt = TrellisStructure.outputs(s,inpt);
 
                 // convert output codeword to bit representation
                 for (size_t n=0; n<N; n++)
                 {
-                    Y1[N-n-1] = otpt&1;
+                    y1(N*(cwlen+i+1)-n-1) = otpt&1;
                     otpt = otpt>>1;
                 }
 
                 // get next encoder state
                 s = nxt;
-
-                // update pointer location
-                Y1 = Y1 + N;
 
             }
 
         }
 
         // 2:nd constituent encoder
-        splib::ivec y2(N*cwlen+numTails);
+        imat y2(N*cwlen+numTails,1);
         {
 
             // permute input bits
-            const splib::ivec xInv = x(InterleaverIndices);
-            const int * X = xInv.begin();
+            const imat xInv = x.elem(InterleaverIndices);
+
+            // initial state
+            int s = 0;
 
             // encode
-            int s = 0;
-            int * Y2 = y2.begin();
             for (size_t i=0; i<cwlen; i++)
             {
 
                 // encoder input
-                int inpt = X[i];
+                int inpt = xInv(i);
 
                 // encoder output codeword (given input and state)
-                int otpt = OUT[inpt*numStates+s];
+                int otpt = TrellisStructure.outputs(s,inpt);
 
                 // convert output codeword to bit representation
                 for (size_t n=0; n<N; n++)
                 {
-                    Y2[N-n-1] = otpt&1;
+                    y2(N*(i+1)-n-1) = otpt&1;
                     otpt = otpt>>1;
                 }
 
                 // get next encoder state
-                s = NEXT[inpt*numStates+s];
-
-                // update pointer location
-                Y2 = Y2 + N;
+                s = TrellisStructure.nextStates(s,inpt);
 
             }
 
@@ -180,7 +170,7 @@ namespace ballet
                 int inpt = -1;
                 for (size_t j=0; j<TrellisStructure.numInputSymbols; j++)
                 {
-                    if (NEXT[j*numStates+s] == nxt)
+                    if (TrellisStructure.nextStates(s,j) == nxt)
                     {
                         inpt = j;
                         break;
@@ -188,28 +178,28 @@ namespace ballet
                 }
 
                 // find termination bit output (given state and termination bit input)
-                int otpt = OUT[inpt*numStates+s];
+                int otpt = TrellisStructure.outputs(s,inpt);
 
                 // convert output codeword to bit representation
                 for (size_t n=0; n<N; n++)
                 {
-                    Y2[N-n-1] = otpt&1;
+                    y2(N*(cwlen+i+1)-n-1) = otpt&1;
                     otpt = otpt>>1;
                 }
 
                 // get next encoder state
                 s = nxt;
 
-                // update pointer location
-                Y2 = Y2 + N;
-
             }
 
         }
 
         // mux turbo encoded data
-        y->set_size(L);
+        y->set_size(L,1);
         {
+
+            // convert object pointer to reference object
+            imat & tmp001 = *y;
 
             // declare pointers
             int * Y = y->begin();
@@ -219,18 +209,12 @@ namespace ballet
             for (size_t i=0; i<cwlen; i++)
             {
 
-                // copy data to return array
-                // (x,y1,y2)
-                Y[0] = Y1[0];
+                // turbo encoder interleaver
+                tmp001((2*N-1)*i) = y1(N*i);
                 for (size_t n=0; n<N-1; n++)
-                    Y[1+n] = Y1[1+n];
+                    tmp001((2*N-1)*i+n+1) = y1(N*i+n+1);
                 for (size_t n=0; n<N-1; n++)
-                    Y[N+n] = Y2[1+n];
-
-                // update pointers
-                Y = Y + 2*N - 1;
-                Y1 = Y1 + N;
-                Y2 = Y2 + N;
+                    tmp001((2*N-1)*i+n+N) = y2(N*i+n+1);
 
             }
 
@@ -238,18 +222,14 @@ namespace ballet
             for (size_t i=0; i<K; i++)
             {
                 for (size_t n=0; n<N; n++)
-                    Y[n] = Y1[n];
-                Y = Y + N;
-                Y1 = Y1 + N;
+                    tmp001((2*N-1)*cwlen+N*i+n) = y1(N*cwlen+N*i+n);
             }
 
             // [termination bits for 2:nd constituent encoder]
             for (size_t i=0; i<K; i++)
             {
                 for (size_t n=0; n<N; n++)
-                    Y[n] = Y2[n];
-                Y = Y + N;
-                Y2 = Y2 + N;
+                    tmp001((2*N-1)*cwlen+N*K+N*i+n) = y2(N*cwlen+N*i+n);
             }
 
         }
@@ -261,18 +241,18 @@ namespace ballet
     {
 
         // default trellis
-        splib::ivec ConstraintLength = "4";
-        splib::imat CodeGenerator = "13 15";
-        splib::ivec FeedbackConnection = "13";
-        TrellisStructure = ballet::poly2trellis(
+        imat ConstraintLength = "4";
+        imat CodeGenerator = "13 15";
+        imat FeedbackConnection = "13";
+        TrellisStructure = poly2trellis(
             ConstraintLength,CodeGenerator,FeedbackConnection);
 
         // default InterleaverIndices
-        InterleaverIndices = to_ivec(splib::linspace(63,1,64));
+        InterleaverIndices = linspace<umat>(63,0,64);
 
     }
 
-    splib::ivec TurboEncoder::encode(const splib::ivec &x)
+    imat TurboEncoder::encode(const imat &x)
     {
 
         BALLET_D(TurboEncoder);
@@ -280,7 +260,7 @@ namespace ballet
         // lock Encoder object
         if (!isLocked()) { d->lock(); }
 
-        splib::ivec y;
+        imat y;
         d->encode(x,&y);
 
         return y;

@@ -1,8 +1,8 @@
 #include "turbodecoder.h"
 #include "turbodecoder_p.h"
-#include "convolutionalcoding.h"
 #include <ballet/logical.h>
-#include <splib/matfunc.h>
+
+using namespace arma;
 
 namespace ballet
 {
@@ -48,9 +48,11 @@ namespace ballet
         numTails = K * N;
 
         // map reverse interleaver
-        rintrlvrIndices.set_size(InterleaverIndices.length());
-        for (size_t ii=0; ii<InterleaverIndices.length(); ii++)
+        rintrlvrIndices.copy_size(InterleaverIndices);
+        for (size_t ii=0; ii<InterleaverIndices.n_elem; ++ii)
+        {
             rintrlvrIndices(InterleaverIndices(ii)) = ii;
+        }
 
         // setup APPDecoder object
         decObj.TrellisStructure = TrellisStructure;
@@ -62,18 +64,18 @@ namespace ballet
         
     }
 
-    void TurboDecoderPrivate::decode(const splib::fvec &x, splib::fvec *y)
+    void TurboDecoderPrivate::decode(const mat &x, mat *_y)
     {
 
         // number of bits in coded message
-        int cwlen = x.length();
+        int cwlen = x.n_elem;
 
         // calculate number of uncoded bits
         int L = (cwlen-2*numTails) / (2*N-1);
 
         // get systematic bits
-        splib::fvec xRx(L+K);
-        splib::fvec xIn(L+K);
+        vec xRx(L+K);
+        vec xIn(L+K);
         for (size_t i=0; i<L; i++)
         {
             xRx(i) = x((2*N-1)*i);
@@ -87,7 +89,7 @@ namespace ballet
 
         // get coded likelihood vector
         // from 1:st constituent encoder
-        splib::fvec lc1(N*(L+K));
+        vec lc1(N*(L+K));
         for (size_t i=0; i<L; i++)
         {
             lc1(N*i) = x((2*N-1)*i);
@@ -107,7 +109,7 @@ namespace ballet
 
         // get coded likelihood vector
         // from 2:nd constituent encoder
-        splib::fvec lc2(N*(L+K));
+        vec lc2(N*(L+K));
         for (size_t i=0; i<L; i++)
         {
             lc2(N*i) = 0.0;
@@ -126,36 +128,37 @@ namespace ballet
         }
 
         // declare extrinsic likelihood vectors
-        splib::fvec Le12(L+K); Le12.zeros();
-        splib::fvec Le21(L+K); Le21.zeros();
-        splib::fvec Le;
+        vec Le12 = zeros<vec>(L+K);
+        vec Le21 = zeros<vec>(L+K);
+        vec Le;
 
         // declare decoder result vector
-        splib::ivec dec;
+        ivec dec;
 
         // declare and initialize comparison vector
-        splib::ivec prior(L); prior.zeros();
+        ivec prior = zeros<ivec>(L);
 
         // declare and initialize zero vector
-        splib::fvec myzeros(3);
-        myzeros.zeros();
+        vec myzeros = zeros<vec>(3);
 
         int iteration = 0;
         while (iteration < NumIterations)
         {
 
             // 1:st constituent decoder
-            splib::fvec La1 = splib::concat(Le21(rintrlvrIndices),myzeros);
-            splib::fvec LU1 = decObj.decode(La1,lc1);
+            vec La1 = Le21.elem(rintrlvrIndices);
+            La1.insert_rows(La1.n_elem,3);
+            vec LU1 = decObj.decode(La1,lc1);
             Le12 = LU1;
 
             // 2:nd constituent decoder
-            splib::fvec La2 = splib::concat(Le12(InterleaverIndices),myzeros);
-            splib::fvec LU2 = decObj.decode(La2,lc2);
+            vec La2 = Le12.elem(InterleaverIndices);
+            La2.insert_rows(La2.n_elem,3);
+            vec LU2 = decObj.decode(La2,lc2);
             Le21 = LU2;
 
             // convert to bit-decisions
-            Le = Le12(0,L-1) + Le21(rintrlvrIndices);
+            Le = Le12(span(0,L-1)) + Le21.elem(rintrlvrIndices);
             dec = getHardDecisions(Le);
 
             if (ballet::all(dec == prior)) { break; }
@@ -166,12 +169,12 @@ namespace ballet
         }
 
         // resize return vector
-        y->set_size(L);
+        mat& y = *_y;
+        y = zeros<mat>(L,1);
     
         // copy result to return vector
-        float * Y = y->begin();
         for (size_t i=0; i<L; i++)
-            Y[i] = static_cast<float>(dec[i]);
+            y(i) = static_cast<double>(dec(i));
 
     }
     
@@ -180,14 +183,14 @@ namespace ballet
     {
 
         // default trellis
-        splib::ivec ConstraintLength = "4";
-        splib::imat CodeGenerator = "13 15";
-        splib::ivec FeedbackConnection = "13";
+        imat ConstraintLength = "4";
+        imat CodeGenerator = "13 15";
+        imat FeedbackConnection = "13";
         TrellisStructure = ballet::poly2trellis(
             ConstraintLength,CodeGenerator,FeedbackConnection);
 
         // default InterleaverIndices
-        InterleaverIndices = to_ivec(splib::linspace(63,1,64));
+        InterleaverIndices = linspace<umat>(63,0,64);
 
         // defalut Algorithm
         Algorithm = "True APP";
@@ -200,7 +203,7 @@ namespace ballet
 
     }
 
-    splib::fvec TurboDecoder::decode(const splib::fvec &x)
+    mat TurboDecoder::decode(const mat &x)
     {
 
         BALLET_D(TurboDecoder);
@@ -208,7 +211,7 @@ namespace ballet
         // lock decoder object
         if (!isLocked()) { d->lock(); }
 
-        splib::fvec y;
+        mat y;
         d->decode(x,&y);
 
         return y;
