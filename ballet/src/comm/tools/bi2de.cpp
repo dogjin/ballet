@@ -22,14 +22,19 @@ namespace ballet
             int dec_val = 0;
 
             // row iterator for i:th binary value
-            imat::row_iterator b_iter = b.begin_row(i);
+            imat::const_row_iterator b_iter = b.begin_row(i);
            
             // convert binary value to decimal number 
             while (b_iter != b.end_row(i))
             {
 
-                if (*b_iter == 0) { base <<= 1; continue; }
-                dec_val += base;
+                if ((*b_iter))
+                {
+                    dec_val += base;
+                }
+
+                base <<= 1;
+                ++b_iter;
                 
             }
 

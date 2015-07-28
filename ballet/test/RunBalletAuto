@@ -1,0 +1,22 @@
+#!/usr/bin/env python
+
+import os
+
+root = os.path.dirname(os.path.abspath(__file__))
+
+unit_tests = [
+    os.path.join(root,'auto/corelib/kernel/test_object'),
+    os.path.join(root,'auto/corelib/tools/test_logical'),
+    os.path.join(root,'auto/corelib/tools/test_random'),
+    os.path.join(root,'auto/comm/tools/test_bi2de'),
+]
+
+def main():
+
+
+    for test in unit_tests:
+        print "Running", test
+        os.system(test)
+
+if __name__ == "__main__":
+   main() 

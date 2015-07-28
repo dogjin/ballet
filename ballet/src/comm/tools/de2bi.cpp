@@ -14,7 +14,7 @@ namespace ballet
 
         // iterate over input, output arrays
         int current_row = 0;
-        for (imat::iterator d_iter = d.begin();
+        for (imat::const_iterator d_iter = d.begin();
              d_iter!=d.end(); ++d_iter)
         {
 
@@ -22,7 +22,7 @@ namespace ballet
             int dec_val = *d_iter;
 
             // row iterator for i:th binary value
-            mat::row_iterator b_iter = b.begin_row(current_row);
+            imat::row_iterator b_iter = b.begin_row(current_row);
 
             while (dec_val != 0)
             {
@@ -50,15 +50,17 @@ namespace ballet
     imat de2bi(const int _d)
     {
 
-        imat d = _d;
+        imat d; 
+        d << _d << endr;
         return de2bi(d);
 
     }
 
     imat de2bi(const int _d, const int n)
     {
-        imat d = _d;
-        retrun de2bi(d,n);
+        imat d;
+        d << _d << endr;
+        return de2bi(d,n);
     }
 
     imat de2bi(const imat d)
@@ -74,7 +76,7 @@ namespace ballet
         {
 
             double mv_dbl = static_cast<double>(max_val);
-            double e = std::floor(std::log2(mv_dbl)) + 1.0;
+            double e = std::floor(log2(mv_dbl)) + 1.0;
             ntmp = static_cast<int>(e);
     
         }
@@ -83,14 +85,14 @@ namespace ballet
             ntmp = 1;
         }
 
-        return de2biPrivate::de2bi(d,n);
+        return de2biPrivate::de2bi(d,ntmp);
 
     }
 
     imat de2bi(const imat d, const int n)
     {
 
-        return de2biPrivate(d,n);
+        return de2biPrivate::de2bi(d,n);
 
 
     }

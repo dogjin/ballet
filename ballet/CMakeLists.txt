@@ -2,6 +2,9 @@ file ( GLOB BALLET_SRCS
        "src/corelib/kernel/object.cpp"
        "src/corelib/tools/random.cpp"
        "src/corelib/tools/logical.cpp"
+       "src/comm/tools/bi2de.cpp"
+       "src/comm/tools/de2bi.cpp"
+       "src/comm/tools/oct2dec.cpp"
        "src/comm/crc/crcbase.cpp"
        "src/comm/crc/crcgenerator.cpp"
        "src/comm/crc/crcdetector.cpp"
@@ -21,6 +24,9 @@ file ( GLOB BALLET_HEADER_FILES
        "include/ballet/ballet.h" )
 
 file ( GLOB BALLET_COMM_HEADER_FILES
+       "src/comm/tools/bi2de.h"
+       "src/comm/tools/de2bi.h"
+       "src/comm/tools/oct2dec.h"
        "src/comm/crc/crcdetector.h"
        "src/comm/crc/crcbase.h"
        "src/comm/crc/crcgenerator.h"
@@ -53,3 +59,5 @@ install ( FILES ${BALLET_HEADER_FILES}
 
 install ( FILES ${BALLET_COMM_HEADER_FILES}
           DESTINATION include/ballet/comm )
+
+add_subdirectory( test EXCLUDE_FROM_ALL )

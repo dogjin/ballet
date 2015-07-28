@@ -1,0 +1,4 @@
+comm/tools/test_bi2de
+corelib/kernel/test_object
+corelib/tools/test_logical
+corelib/tools/test_random

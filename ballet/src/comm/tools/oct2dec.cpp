@@ -13,39 +13,42 @@ namespace ballet
         imat d(c.n_rows,c.n_cols,fill::zeros);
 
         // iterate over input, output arrays
-        for (imat::iterator c_iter = c.begin(), 
-             imat::iterator d_iter = d.begin(); 
-             i!=c.end(); ++i, ++j)
         {
-
-            // get element value [octal]
-            int oct_val = *i;
-
-            // initialize base
-            int base = 1;
-
-            // initialize result value [decimal]
-            int dec_val = 0;
-            
-            while (oct_val != 0)
+            imat::const_iterator c_iter = c.begin();
+            imat::iterator d_iter = d.begin();
+            for ( ; c_iter != c.end(); ++c_iter, ++d_iter)
             {
-        
-                // least significant digit
-                int oct_digit = oct_val%10;
 
-                // update decimal value
-                dec_val += oct_digit * base;
+                // get element value [octal]
+                int oct_val = *c_iter;
 
-                // get next octal digit
-                oct_val = oct_val/10;
+                // initialize base
+                int base = 1;
 
-                // update base
-                base <<= 3;
+                // initialize result value [decimal]
+                int dec_val = 0;
+                
+                while (oct_val != 0)
+                {
+            
+                    // least significant digit
+                    int oct_digit = oct_val%10;
+
+                    // update decimal value
+                    dec_val += oct_digit * base;
+
+                    // get next octal digit
+                    oct_val = oct_val/10;
+
+                    // update base
+                    base <<= 3;
+
+                }
+
+                // update result
+                *d_iter = dec_val;
 
             }
-
-            // update result
-            *j = dec_val;
 
         }
 
