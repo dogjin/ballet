@@ -16,7 +16,7 @@ namespace ballet
     {
 
         // get the length of the polynomial
-        imat poly = Polynomial(span(1,Polynomial.n_rows-1),0);
+        imat poly = Polynomial(0,span(1,Polynomial.n_cols-1));
         int polyLen = poly.n_elem;
 
         // get the length of the input codeword

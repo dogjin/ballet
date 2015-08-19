@@ -12,9 +12,6 @@ typedef struct
     ballet::CRCDetector *d;
 } crcdetector;
 
-static int
-crcdetector_setproperty_polynomial(crcdetector *, PyObject *);
-
 static PyObject *
 crcdetector_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
@@ -50,7 +47,7 @@ crcdetector_setproperty(crcdetector *self, PyObject *args, PyObject *kwds)
     PyObject * propertyValue;
     char * property_name;
 
-    static char * kwlist[] = {NULL};
+    static char * kwlist[] = {"name","value",NULL};
 
     if (!PyArg_ParseTupleAndKeywords(args,kwds,"OO",kwlist,&propertyName,
         &propertyValue))
@@ -71,12 +68,52 @@ crcdetector_setproperty(crcdetector *self, PyObject *args, PyObject *kwds)
 
     if (!strcmp(property_name,"Polynomial"))
     {
-        
-        crcdetector_setproperty_polynomial(self,propertyValue);
+
+        if (!PyArray_Check(propertyValue))
+        {
+            PyErr_Format(PyExc_TypeError,
+                "CRCDetector.Polynomial property must"
+                "by a numpy.ndarray type, not %.500s",
+                Py_TYPE(propertyValue)->tp_name);
+            return 0;
+        }
+
+        // cast to PyArrayObject type
+        PyArrayObject * p = (PyArrayObject*)propertyValue;
+
+        // get pointer to the data buffer
+        char * bytes = PyArray_BYTES(p);
+
+        // get the number of array dimensions
+        npy_intp size = PyArray_Size(propertyValue);
+        npy_intp * shape = PyArray_SHAPE(p);
+        npy_intp dim1 = shape[0];
+        npy_intp dim2 = shape[1];
+
+        // get array stride length
+        npy_intp s0 = PyArray_STRIDE(p,0);
+        npy_intp s1 = PyArray_STRIDE(p,1);
+     
+        // resize CRCDetector.Polynomial property
+        self->d->Polynomial.set_size(dim1,dim2);
+
+        for (npy_intp r=0; r<dim1; ++r)
+        {
+
+            for (npy_intp c=0; c<dim2; ++c)
+            {
+                char * tmp = bytes + r*s0 + c*s1;
+                self->d->Polynomial(r,c) = *((npy_int64*)tmp);
+            }
+
+        }
 
     }
     else if (!strcmp(property_name,"ReflectChecksums"))
     {
+
+        self->d->ReflectChecksums = PyObject_IsTrue(propertyValue);
+
     }
     else
     {
@@ -86,24 +123,192 @@ crcdetector_setproperty(crcdetector *self, PyObject *args, PyObject *kwds)
         return 0;
     }
 
+    Py_RETURN_NONE;
+
 }
 
-static int
-crcdetector_setproperty_polynomial(crcdetector *self, PyObject *propertyValue)
+static PyObject *
+crcdetector_getproperty(crcdetector *self, PyObject *args, PyObject *kwds)
 {
 
-    if (!PyArray_Check(propertyValue))
+    PyObject * propertyName;
+    char * property_name;
+
+    static char * kwlist[] = {"name",NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args,kwds,"O",kwlist,&propertyName))
+    {
+        return NULL;
+    }
+
+    if (!PyString_Check(propertyName))
     {
         PyErr_Format(PyExc_TypeError,
-            "CRCDetector.Polynomial property must"
-            "by a numpy.ndarray type, not %.500s",
-            Py_TYPE(propertyValue)->tp_name);
+            "PropertyName must be a string, not %.500s",
+            Py_TYPE(propertyName)->tp_name);
         return 0;
+    }
+
+    // convert :propertyName: to c string
+    property_name = PyString_AsString(propertyName);
+
+    if (!strcmp(property_name,"Polynomial"))
+    {
+
+        // create return array
+        int ndim = 2;
+        npy_intp dims[ndim];
+        dims[0] = self->d->Polynomial.n_rows;
+        dims[1] = self->d->Polynomial.n_cols;
+        PyObject * poly = (PyObject*)PyArray_NewFromDescr(&PyArray_Type,
+            PyArray_DescrFromType(NPY_INT64),
+            ndim,
+            dims,
+            NULL,
+            NULL,
+            NPY_ARRAY_F_CONTIGUOUS|NPY_ARRAY_WRITEABLE,
+            NULL);
+
+        // get pointer to array data buffer
+        char * bytes = PyArray_BYTES((PyArrayObject*)poly);
+        npy_intp s0 = PyArray_STRIDE((PyArrayObject*)poly,0);
+        npy_intp s1 = PyArray_STRIDE((PyArrayObject*)poly,1);
+
+        // copy result from armadillo c++ to numpy array
+        for (npy_intp r=0; r<dims[0]; ++r)
+        {
+            for (npy_intp c=0; c<dims[1]; ++c)
+            {
+                char * tmp = bytes + r*s0 + c*s1;
+                (*((npy_int64*)tmp)) = self->d->Polynomial(r,c);
+            }
+        }
+
+        Py_INCREF(poly);
+        return poly;
+
+    }
+    
+    else if (!strcmp(property_name,"ReflectChecksums"))
+    {
+
+        return PyBool_FromLong(self->d->ReflectChecksums);
+
+    }
+
+    else
+    {
+
+        PyErr_Format(PyExc_AttributeError,
+            "CRCDetector has no property %s",
+            property_name);
+        return 0;
+
     }
 
 }
 
+static PyObject *
+crcdetector_islocked(crcdetector *self)
+{
+
+    // get the status of the system object
+    bool status = self->d->isLocked();
+    return PyBool_FromLong(status);
+
+}
+
+static PyObject *
+crcdetector_release(crcdetector *self)
+{
+
+    // release system object
+    self->d->release();
+    Py_RETURN_NONE;
+
+}
+
+static PyObject *
+crcdetector_reset(crcdetector *self)
+{
+
+    // release system object
+    self->d->reset();
+    Py_RETURN_NONE;
+
+}
+
+static PyObject *
+crcdetector_step(crcdetector *self, PyObject *args)
+{
+
+    PyObject * arg001;
+
+    if (!PyArg_ParseTuple(args,"O",&arg001))
+    {
+        return 0;
+    }
+
+    if (!PyArray_Check(arg001))
+    {
+        PyErr_Format(PyExc_TypeError,
+            "Input must be a numpy.ndarray type, not %.500s",
+            Py_TYPE(arg001)->tp_name);
+        return 0;
+    }
+
+    // cast to PyArrayObject type
+    PyArrayObject * X = (PyArrayObject*)arg001;
+
+    // get pointer to the data buffer
+    char * bytes = PyArray_BYTES(X);
+
+    // get the number of array dimensions
+    npy_intp * shape = PyArray_SHAPE(X);
+    npy_intp dim1 = shape[0];
+    npy_intp dim2 = shape[1];
+
+    // get array strides
+    npy_intp s0 = PyArray_STRIDE(X,0);
+    npy_intp s1 = PyArray_STRIDE(X,1);
+ 
+    // create armadillo matrix
+    arma::imat X001(dim1,dim2);
+
+    // copy data from numpy input array to
+    // armadillo matrix for processing
+    for (npy_intp r=0; r<dim1; ++r)
+    {
+
+        for (npy_intp c=0; c<dim2; ++c)
+        {
+            char * tmp = bytes + r*s0 + c*s1;
+            X001(r,c) = *((npy_int64*)tmp);
+        }
+
+    }
+
+    // run CRCDetector::detect()
+    int err = self->d->detect(X001);
+
+    // release system object
+    return PyInt_FromLong(err);
+
+}
+
 static PyMethodDef crcdetector_methods[] = {
+    {"setProperty", (PyCFunction)crcdetector_setproperty, METH_VARARGS | METH_KEYWORDS,
+    "Set the property value"},
+    {"getProperty", (PyCFunction)crcdetector_getproperty, METH_VARARGS | METH_KEYWORDS,
+    "Get the property value"},
+    {"isLocked", (PyCFunction)crcdetector_islocked, METH_NOARGS,
+    "Locked status for input attributes and nontunable properties"},
+    {"release", (PyCFunction)crcdetector_release, METH_NOARGS,
+    "Allow property value and input characteristics changes"},
+    {"reset", (PyCFunction)crcdetector_reset, METH_NOARGS,
+    "Reset states of CRC detector object"},
+    {"step", (PyCFunction)crcdetector_step, METH_VARARGS,
+    "Detect errors in input data using CRC"},
     {NULL,NULL,0,NULL}          /* sentinel */
 };
 

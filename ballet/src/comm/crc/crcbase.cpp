@@ -69,7 +69,7 @@ namespace ballet
     {
 
         // get the length of the polynomial
-        imat poly = Polynomial(span(1,Polynomial.n_rows-1),0);
+        imat poly = Polynomial(0,span(1,Polynomial.n_cols-1));
         crc_size = poly.n_elem;
 
         // translate the generator polynomail to hexidecimal
@@ -94,7 +94,7 @@ namespace ballet
         unsigned int cwsize = x.n_elem;
 
         // get the length of the polynomial
-        imat poly = Polynomial(span(1,Polynomial.n_rows-1),0);
+        imat poly = Polynomial(0,span(1,Polynomial.n_cols-1));
         int polyLen = poly.n_elem;
 
         // Now proceed as if it's a regular CRC computation
@@ -116,7 +116,7 @@ namespace ballet
 
         // convert remainder from decimal
         // to binary representation
-        imat reg = de2bi(remainder,polyLen);
+        imat reg = de2bi(remainder,polyLen).t();
 
         // reflect the checksum if appropriate
         if (ReflectChecksums)
@@ -126,8 +126,8 @@ namespace ballet
 
         // add checksum
         imat encData(cwsize+polyLen,1);
-	encData(span(0,cwsize-1),0) = x;
-	encData(span(cwsize,cwsize+polyLen-1),0) = reg;
+        encData(span(0,cwsize-1),0) = x;
+        encData(span(cwsize,cwsize+polyLen-1),0) = reg;
 
         return encData;
 
@@ -151,9 +151,9 @@ namespace ballet
 
         // set polynomial
         imat polynomial = convertHexToBinary(poly);
-        Polynomial.resize(1+polynomial.n_rows,1);
+        Polynomial.resize(1,1+polynomial.n_cols);
         Polynomial(0) = 1;
-        Polynomial(span(1,polynomial.n_rows),0) = polynomial;
+        Polynomial(0,span(1,polynomial.n_cols)) = polynomial;
 
     }
 
@@ -175,9 +175,9 @@ namespace ballet
 
         // set polynomial
         imat polynomial = convertHexToBinary(poly);
-        Polynomial.resize(1+polynomial.n_rows,1);
+        Polynomial.resize(1,1+polynomial.n_cols);
         Polynomial(0) = 1;
-        Polynomial(span(1,polynomial.n_rows),0) = polynomial;
+        Polynomial(0,span(1,polynomial.n_cols)) = polynomial;
 
     }
 
